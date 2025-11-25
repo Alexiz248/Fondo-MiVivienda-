@@ -1,0 +1,31 @@
+{
+  "users": [
+    {
+      "id": "u_demo",
+      "name": "Demo User",
+      "email": "demo@example.com",
+      "passwordHash": "$2a$10$uJmZkWZs0/EXAMPLEDUMMYHASHxxxxxxxxxxxxxxxxxxxx",
+      "role": "admin",
+      "createdAt": "2025-11-25T00:00:00.000Z"
+    },
+    {
+      "id": "YkTUz5ZMbw4NjfQR43pDB",
+      "name": "alexis",
+      "email": "alexisfyd@gmail.com",
+      "passwordHash": "$2a$10$4T3J43WwLi6xxhQaoPotH.i.FMqDdUc3IPDQ8bnDo.ppD5/..MvnS",
+      "role": "user",
+      "createdAt": "2025-11-25T21:27:24.008Z"
+    }
+  ],
+  "clientes": [],
+  "inmuebles": [],
+  "operations": [
+    {
+      "id": "Xv9hOMVRfdwWEbUbyg2fI",
+      "type": "login",
+      "userId": "YkTUz5ZMbw4NjfQR43pDB",
+      "token": "1_I3xUA5OPATu-H2zgHn3Uan",
+      "at": "2025-11-25T21:27:24.096Z"
+    }
+  ]
+}
