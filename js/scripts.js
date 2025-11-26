@@ -1,11 +1,3 @@
-/* -------------------------
-  Helpers matemáticos
-   - Método francés (vencido)
-   - IRR iterativa (Newton + bisección fallback)
-   - NPV
-   - Export CSV
---------------------------*/
-
 function toNumber(v){ const n = Number(v); return isNaN(n)?0:n; }
 function round(v,dec=2){ return Math.round(v * Math.pow(10,dec))/Math.pow(10,dec); }
 
@@ -109,7 +101,9 @@ async function apiPostAuth(path, body){
 --------------------------*/
 document.getElementById('btn-calcular').addEventListener('click', calcular);
 
+// Versión mejorada de calcular() con logs, comprobaciones y setKPI seguro
 function calcular(){
+    console.log('calcular: inicio');
     // leer inputs
     const moneda = document.getElementById('cfg-moneda').value;
     const tipoTasa = document.getElementById('cfg-tipo-tasa').value;
@@ -125,50 +119,30 @@ function calcular(){
 
     // periodic rate (mensual) en decimal
     const i_periodo = periodicRateFromInputs(tasaAnual, tipoTasa, capAnual);
-    // tasa efectiva anual equivalente (TEA)
     const tea = Math.pow(1 + i_periodo, 12) - 1;
 
-    // construir flujo
-    // Período 0: desembolso neto recibido por el cliente = principal + bono?
-    // En MiVivienda el bono es un aporte (sumado al monto disponible), aquí consideraremos que el cliente recibe principal + bono (si el bono paga parte del precio).
-    const monto_recibido = principal + bono; // neto en mano para fines de flujo
-    // cashflows desde t=0...n (mensual)
-    // convencion: flujo[0] = +monto recibido para el beneficiario (cliente / empresa). Para calcular VAN/TIR según el vendedor/empresa, ajusta el signo.
-    // Pero IRR para el préstamo normalmente se calcula desde perspectiva del prestamista:
-    // Aquí asumimos: flujo para el cliente: +monto_recibido (positivo), luego pagos negativos (salidas).
+    const monto_recibido = principal + bono;
     const cashflows = [];
-    // inicial: ingreso
-    cashflows.push(monto_recibido * -1); // como flujo de salida para la empresa (si la empresa desembolsa), invertimos: para encontrar TIR desde prestamista, ponemos -monto recibido
-    // Para simplificar, calculamos VAN/TIR desde la perspectiva del prestamista (EFECTO: empresa entrega principal -> salida negativa), y luego recibe cuotas positivas.
-    // Por eso inicial es -principal (si bono lo paga aparte, lo tratamos como aporte del estado y no como salida del prestamista)
-    // Ajuste: si bono>0, consideramos bono como aporte estatal (no sale del prestamista) -> prestamista sólo desembolsa principal. Entonces monto_recibido_empresa = principal
-    cashflows[0] = -principal;
+    cashflows.push(-principal);
 
-    // GENERAR TABLA considerando gracia
     const tbody = document.getElementById('tbody-amort');
     tbody.innerHTML = '';
 
     let saldo = principal;
     let periodo = 1;
     const rows = [];
-    let pagosTotales = 0;
 
-    // Si hay meses de gracia total y capitaliza intereses -> los intereses se acumulan al principal al final del periodo de gracia.
     if(tipoGracia === 'total' && mesesGracia > 0 && capitalizaGracia){
-        // calcular intereses durante los meses de gracia y sumarlos al saldo
         let interes_acum = 0;
         for(let m=0;m<mesesGracia;m++){
             const interes = saldo * i_periodo;
             interes_acum += interes;
-            // registro fila periodo con pago 0
             rows.push({periodo: periodo, pago:0, interes:interes, amort:0, capital:saldo, saldo: saldo});
             periodo++;
         }
-        saldo += interes_acum; // capitaliza al final del periodo de gracia
-        // queda el resto del plazo = plazo - mesesGracia
+        saldo += interes_acum;
         const n_restante = Math.max(1, plazo - mesesGracia);
         const cuota = cuotaFrances(saldo, i_periodo, n_restante);
-        // generar cuotas del resto
         for(let p=0;p<n_restante;p++){
             const interes = saldo * i_periodo;
             const amort = cuota - interes;
@@ -178,7 +152,6 @@ function calcular(){
             periodo++;
         }
     } else if(tipoGracia === 'total' && mesesGracia > 0 && !capitalizaGracia){
-        // total grace, no capitalizar: pagos 0, saldo no cambia; luego cuotas normales sobre el capital original en plazo-restante
         for(let m=0;m<mesesGracia;m++){
             rows.push({periodo: periodo, pago:0, interes:0, amort:0, capital:saldo, saldo: saldo});
             periodo++;
@@ -194,7 +167,6 @@ function calcular(){
             periodo++;
         }
     } else if(tipoGracia === 'partial' && mesesGracia > 0){
-        // parcial: durante gracia se paga solo intereses; luego resto con cuota francesa sobre capital original
         for(let m=0;m<mesesGracia;m++){
             const interes = saldo * i_periodo;
             const pago = interes;
@@ -212,7 +184,6 @@ function calcular(){
             periodo++;
         }
     } else {
-        // sin gracia
         const cuota = cuotaFrances(saldo, i_periodo, plazo);
         for(let p=0;p<plazo;p++){
             const interes = saldo * i_periodo;
@@ -224,54 +195,56 @@ function calcular(){
         }
     }
 
-    // rellenar tabla y construir flujos desde perspectiva del prestamista (recibe pagos positivos)
-    const tbodyHTML = [];
-    let saldoInicial = principal;
-    let acumuladoPagos = 0;
-    // cashflows: [ -principal, pago1, pago2, ... ] (periodos mensuales)
+    // construir cashflows y tabla
     const cf = [];
     cf.push(-principal);
-    for(let r of rows){
-        // los pagos son salidas del cliente y entradas del prestamista: por eso positivos en cf
+    let acumuladoPagos = 0;
+    rows.forEach(r=>{
         cf.push(round(toNumber(r.pago), 2));
         acumuladoPagos += toNumber(r.pago);
-    }
+    });
 
-    // llenar tabla
-    rows.forEach(r=>{
-        tbodyHTML.push(`<tr>
+    const tbodyHTML = rows.map(r=>`<tr>
       <td class="left">${r.periodo}</td>
       <td>${formatCurrency(r.pago || 0, moneda)}</td>
       <td>${formatCurrency(r.interes || 0, moneda)}</td>
       <td>${formatCurrency(r.amort || 0, moneda)}</td>
       <td>${formatCurrency(r.capital || 0, moneda)}</td>
       <td>${formatCurrency(r.saldo || 0, moneda)}</td>
-    </tr>`);
-    });
-    document.getElementById('tbody-amort').innerHTML = tbodyHTML.join('');
+    </tr>`).join('');
+    document.getElementById('tbody-amort').innerHTML = tbodyHTML;
 
-    // Indicadores
+    // indicadores calculados
     const cuotaProm = rows.filter(r=>r.pago>0).length? rows.filter(r=>r.pago>0).reduce((s,x)=>s+x.pago,0) / rows.filter(r=>r.pago>0).length : 0;
-    const costoTotal = round(accumadoPagos - principal,2);
-    const van = round(npv(cf, tasaDescuento/12),2); // VAN a tasa descuento anual convertida a mensual
+    const costoTotal = round(acumuladoPagos - principal,2);
+    const van = round(npv(cf, tasaDescuento/12),2);
     const tir_mensual = irr(cf);
     const tir_anual = isNaN(tir_mensual)? NaN : Math.pow(1 + tir_mensual, 12) - 1;
 
-    // Mostrar KPIs
-    document.getElementById('k-cuota').innerText = formatCurrency(round(cuotaProm,2), moneda);
-    document.getElementById('k-costo').innerText = formatCurrency(costoTotal, moneda);
-    document.getElementById('k-tea').innerText = (round(tea*100,4)) + ' %';
-    document.getElementById('k-van').innerText = (isFinite(van) ? formatCurrency(van, moneda) : 'N/A');
-    document.getElementById('k-tir').innerText = (isFinite(tir_anual) ? (round(tir_anual*100,4) + ' %') : 'N/A');
-    document.getElementById('k-neto').innerText = formatCurrency(principal, moneda);
+    // actualización segura de KPIs
+    function setKPI(id, value){
+        const el = document.getElementById(id);
+        if(!el) {
+            console.warn('KPI element not found:', id);
+            return;
+        }
+        el.innerText = value;
+    }
+
+    // formato y comprobaciones
+    setKPI('k-cuota', isFinite(cuotaProm) ? formatCurrency(round(cuotaProm,2), moneda) : 'N/A');
+    setKPI('k-costo', isFinite(costoTotal) ? formatCurrency(costoTotal, moneda) : 'N/A');
+    setKPI('k-tea', isFinite(tea) ? (round(tea*100,4) + ' %') : 'N/A');
+    setKPI('k-van', isFinite(van) ? formatCurrency(van, moneda) : 'N/A');
+    setKPI('k-tir', isFinite(tir_anual) ? (round(tir_anual*100,4) + ' %') : 'N/A');
+    setKPI('k-neto', isFinite(principal) ? formatCurrency(principal, moneda) : 'N/A');
 
     // guardar cf para export
     window.__lastCalc = {rows, cf, moneda, principal, tasaAnual, tipoTasa, capAnual};
 
-    // activar export
     document.getElementById('btn-export').disabled = false;
 
-    // log operation to backend if authenticated (best-effort)
+    // log operation (no bloqueante)
     (async ()=>{
         try{
             const payload = {
@@ -284,12 +257,12 @@ function calcular(){
                 timestamp: new Date().toISOString()
             };
             await apiPostAuth('/api/operations', { type: 'calculation', payload });
-            // no UI change needed; operation recorded server-side
         }catch(e){
-            // ignore if not logged or server unreachable
-            // console.log('operation log failed', e);
+            // ignore
         }
     })();
+
+    console.log('calcular: fin', {cuotaProm, costoTotal, van, tir_anual});
 }
 
 /* -------------------------
@@ -301,27 +274,29 @@ document.getElementById('btn-export').addEventListener('click', function(){
     const rows = data.rows;
     const lines = [['Periodo','Pago','Interés','Amortización','Capital','Saldo']];
 
-
-  rows.forEach(r=>{
-    lines.push([r.periodo,r.pago,r.interes,r.amort,r.capital,r.saldo]);
-  });
-  const csv = lines.map(r=>r.map(c=>String(c).replace(/"/g,'""')).map(c=>`"${c}"`).join(',')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'tabla_amortizacion.csv';
-  a.click();
-  URL.revokeObjectURL(url);
+    rows.forEach(r=>{
+        lines.push([r.periodo,r.pago,r.interes,r.amort,r.capital,r.saldo]);
+    });
+    const csv = lines.map(r=>r.map(c=>String(c).replace(/"/g,'""')).map(c=>`"${c}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tabla_amortizacion.csv';
+    a.click();
+    URL.revokeObjectURL(url);
 });
 
+/* -------------------------
+  Guardar / cargar cliente e inmueble
+--------------------------*/
 document.getElementById('btn-guardar-cliente').addEventListener('click', ()=>{
-  const c = {
-    nombre: document.getElementById('cliente-nombre').value,
-    doc: document.getElementById('cliente-doc').value,
-    ingresos: document.getElementById('cliente-ingresos').value,
-    obs: document.getElementById('cliente-obs').value
-  };
+    const c = {
+        nombre: document.getElementById('cliente-nombre').value,
+        doc: document.getElementById('cliente-doc').value,
+        ingresos: document.getElementById('cliente-ingresos').value,
+        obs: document.getElementById('cliente-obs').value
+    };
     // try saving to backend; fallback to localStorage
     (async ()=>{
         try{
@@ -335,31 +310,31 @@ document.getElementById('btn-guardar-cliente').addEventListener('click', ()=>{
 });
 
 document.getElementById('btn-cargar-cliente').addEventListener('click', ()=>{
-  const s = localStorage.getItem('demo_cliente');
-  if(!s){
-    // cargar demo por defecto
-    document.getElementById('cliente-nombre').value = 'Juan Pérez';
-    document.getElementById('cliente-doc').value = '12345678';
-    document.getElementById('cliente-ingresos').value = 3500;
-    document.getElementById('cliente-obs').value = 'Cliente interesado en departamento 3B, perfil familiar.';
-    alert('Demo cargada en formularios.');
-    return;
-  }
-  const c = JSON.parse(s);
-  document.getElementById('cliente-nombre').value = c.nombre;
-  document.getElementById('cliente-doc').value = c.doc;
-  document.getElementById('cliente-ingresos').value = c.ingresos;
-  document.getElementById('cliente-obs').value = c.obs;
-  alert('Cliente cargado desde demo local.');
+    const s = localStorage.getItem('demo_cliente');
+    if(!s){
+        // cargar demo por defecto
+        document.getElementById('cliente-nombre').value = 'Juan Pérez';
+        document.getElementById('cliente-doc').value = '12345678';
+        document.getElementById('cliente-ingresos').value = 3500;
+        document.getElementById('cliente-obs').value = 'Cliente interesado en departamento 3B, perfil familiar.';
+        alert('Demo cargada en formularios.');
+        return;
+    }
+    const c = JSON.parse(s);
+    document.getElementById('cliente-nombre').value = c.nombre;
+    document.getElementById('cliente-doc').value = c.doc;
+    document.getElementById('cliente-ingresos').value = c.ingresos;
+    document.getElementById('cliente-obs').value = c.obs;
+    alert('Cliente cargado desde demo local.');
 });
 
 document.getElementById('btn-guardar-inmueble').addEventListener('click', ()=>{
-  const i = {
-    proyecto: document.getElementById('inmueble-proy').value,
-    unidad: document.getElementById('inmueble-unidad').value,
-    precio: document.getElementById('inmueble-precio').value,
-    desc: document.getElementById('inmueble-desc').value
-  };
+    const i = {
+        proyecto: document.getElementById('inmueble-proy').value,
+        unidad: document.getElementById('inmueble-unidad').value,
+        precio: document.getElementById('inmueble-precio').value,
+        desc: document.getElementById('inmueble-desc').value
+    };
     (async ()=>{
         try{
             await apiPostAuth('/api/inmuebles', i);
@@ -372,27 +347,144 @@ document.getElementById('btn-guardar-inmueble').addEventListener('click', ()=>{
 });
 
 document.getElementById('btn-cargar-inmueble').addEventListener('click', ()=>{
-  const s = localStorage.getItem('demo_inmueble');
-  if(!s){
-    document.getElementById('inmueble-proy').value = 'Condominio Los Olivos';
-    document.getElementById('inmueble-unidad').value = 'A-302';
-    document.getElementById('inmueble-precio').value = 200000;
-    document.getElementById('inmueble-desc').value = 'Departamento 3D, 2 dormitorios, 2 baños.';
-    alert('Demo de unidad cargada.');
-    return;
-  }
-  const i = JSON.parse(s);
-  document.getElementById('inmueble-proy').value = i.proyecto;
-  document.getElementById('inmueble-unidad').value = i.unidad;
-  document.getElementById('inmueble-precio').value = i.precio;
-  document.getElementById('inmueble-desc').value = i.desc;
-  alert('Unidad cargada desde demo local.');
+    const s = localStorage.getItem('demo_inmueble');
+    if(!s){
+        document.getElementById('inmueble-proy').value = 'Condominio Los Olivos';
+        document.getElementById('inmueble-unidad').value = 'A-302';
+        document.getElementById('inmueble-precio').value = 200000;
+        document.getElementById('inmueble-desc').value = 'Departamento 3D, 2 dormitorios, 2 baños.';
+        alert('Demo de unidad cargada.');
+        return;
+    }
+    const i = JSON.parse(s);
+    document.getElementById('inmueble-proy').value = i.proyecto;
+    document.getElementById('inmueble-unidad').value = i.unidad;
+    document.getElementById('inmueble-precio').value = i.precio;
+    document.getElementById('inmueble-desc').value = i.desc;
+    alert('Unidad cargada desde demo local.');
 });
 
 document.getElementById('btn-limpiar').addEventListener('click', ()=>{
-  document.getElementById('tbody-amort').innerHTML = '';
-  ['k-cuota','k-costo','k-tea','k-van','k-tir','k-neto'].forEach(id=>document.getElementById(id).innerText='-');
-  window.__lastCalc = null;
-  document.getElementById('btn-export').disabled = true;
+    document.getElementById('tbody-amort').innerHTML = '';
+    ['k-cuota','k-costo','k-tea','k-van','k-tir','k-neto'].forEach(id=>document.getElementById(id).innerText='-');
+    window.__lastCalc = null;
+    document.getElementById('btn-export').disabled = true;
 });
+// javascript
+// Inserta este bloque al final de `js/scripts.js`
 
+// 1) Añadir CSS para tooltips (auto-inyectado)
+(function addKpiTooltipStyles(){
+    const css = `
+    .kpi[data-tip]{ position:relative; cursor:help; }
+    .kpi[data-tip]::after{
+        content: attr(data-tip);
+        position:absolute;
+        left:50%;
+        transform:translateX(-50%);
+        top: calc(100% + 8px);
+        background: rgba(15,23,42,0.95);
+        color:#fff;
+        padding:10px;
+        border-radius:8px;
+        white-space:pre-wrap;
+        font-size:12px;
+        min-width:220px;
+        max-width:360px;
+        box-shadow:0 6px 18px rgba(0,0,0,0.12);
+        display:none;
+        z-index:999;
+        text-align:left;
+    }
+    .kpi[data-tip]:hover::after{ display:block; }
+    `;
+    const s = document.createElement('style');
+    s.setAttribute('data-created-by','kpi-tooltips');
+    s.appendChild(document.createTextNode(css));
+    document.head.appendChild(s);
+})();
+
+// 2) Mapear KPI -> texto explicativo (ecuaciones)
+(function setKpiTooltips(){
+    const tips = {
+        'k-cuota': `Cuota (método francés):\nA = P * i / (1 - (1 + i)^(-n))\nP: principal, i: tasa periódica (mensual, decimal), n: número de periodos`,
+        'k-costo': `Costo total del crédito:\nCosto = Σ_{t=1..T} Pago_t - Monto_neto_recibido\n(es decir, suma de todos los pagos menos lo recibido inicialmente)`,
+        'k-tea': `Tasa Efectiva Anual (TEA):\nTEA = (1 + i_periodo)^{12} - 1\ni_periodo: tasa periódica mensual (decimal) usada en la cuota`,
+        'k-van': `VAN (Valor Actual Neto):\nVAN = Σ_{t=0..T} CF_t / (1 + r)^t\nCF_0 = -Monto_neto_recibido, r = tasa descuento periódica (mensual)`,
+        'k-tir': `TIR (IRR):\nTIR es r tal que Σ_{t=0..T} CF_t / (1 + r)^t = 0\n(Cálculo numérico: Newton + bisección; muestra TIR anual = (1+tir_mensual)^{12}-1)`,
+        'k-neto': `Monto neto recibido:\nMonto_neto_recibido = principal + bono\n(este valor se usa como CF_0 en VAN/TIR)`
+    };
+
+    Object.keys(tips).forEach(id=>{
+        const el = document.getElementById(id);
+        if(!el) return;
+        const parent = el.closest('.kpi') || el.parentElement;
+        if(parent) {
+            parent.setAttribute('data-tip', tips[id]);
+            parent.setAttribute('aria-label', tips[id]);
+        } else {
+            el.setAttribute('title', tips[id]); // fallback
+        }
+    });
+})();
+
+// javascript
+// Insertar al final de `js/scripts.js`
+
+(function addTableHeaderTooltips(){
+    const css = `
+    th[data-tip]{ position:relative; cursor:help; }
+    th[data-tip]::after{
+        content: attr(data-tip);
+        position:absolute;
+        left:50%;
+        transform:translateX(-50%);
+        top: calc(100% + 8px);
+        background: rgba(15,23,42,0.95);
+        color:#fff;
+        padding:8px;
+        border-radius:8px;
+        white-space:pre-wrap;
+        font-size:12px;
+        min-width:180px;
+        max-width:360px;
+        box-shadow:0 6px 18px rgba(0,0,0,0.12);
+        display:none;
+        z-index:999;
+        text-align:left;
+    }
+    th[data-tip]:hover::after{ display:block; }
+    `;
+    const s = document.createElement('style');
+    s.setAttribute('data-created-by','table-header-tooltips');
+    s.appendChild(document.createTextNode(css));
+    document.head.appendChild(s);
+
+    const tips = {
+        'Pago': `Pago total del periodo:\nIncluye Interés + Amortización.`,
+        'Interés': `Interés del periodo:\nInterés = Saldo_{anterior} * i_periodo\n(i_periodo = tasa periódica mensual en decimal).`,
+        'Amortización': `Amortización del periodo:\nAmort = Pago - Interés\nReduce el saldo del préstamo.`,
+        'Capital': `Columna 'Capital':\nSiempre 0 en este esquema (columna reservada para otros usos).`,
+        'Saldo': `Saldo pendiente:\nSaldo_{t} = Saldo_{t-1} - Amortización_{t}\nMonto de principal que queda por pagar.`
+    };
+
+    function applyTips(){
+        const ths = document.querySelectorAll('#tabla-amort thead th');
+        ths.forEach(th=>{
+            const txt = (th.textContent || '').trim();
+            // Si el encabezado contiene la palabra clave, asignar tip
+            Object.keys(tips).forEach(key=>{
+                if(txt.toLowerCase().includes(key.toLowerCase())){
+                    th.setAttribute('data-tip', tips[key]);
+                    th.setAttribute('aria-label', tips[key]);
+                }
+            });
+        });
+    }
+
+    if(document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', applyTips);
+    } else {
+        applyTips();
+    }
+})();

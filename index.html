@@ -1,4 +1,5 @@
-    <!doctype html>
+<!-- html -->
+<!doctype html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
@@ -23,7 +24,7 @@
 <p class="muted">Interfaz demo para cabinas de venta. Incluye configuraciones, registro de cliente y unidad, cálculo de tabla de amortización, VAN y TIR. <em>Ahora con login/register y persistencia demo en `db.json`.</em></p>
 
 <div class="layout">
-    <!-- PANEL IZQUIERDO: CONFIG / CLIENTE / INMUEBLE -->
+    <!-- PANEL IZQUIERDO: CONFIG -->
     <div>
         <div class="card">
             <div class="flex-between"><strong>Configuración del préstamo</strong><span class="small">ajustes globales</span></div>
@@ -84,50 +85,13 @@
                 <p class="note">Suposiciones: meses de 30 días → 12 periodos por año. Método francés = cuota fija (vencida). En gracia parcial se paga solo interés; en gracia total puede capitalizarse si así lo indicas.</p>
             </div>
         </div>
-
-        <div class="card" style="margin-top:12px;">
-            <strong>Registro de cliente</strong>
-            <div style="margin-top:8px;">
-                <label>Nombre completo</label>
-                <input id="cliente-nombre" type="text" placeholder="Ej: Juan Pérez" />
-
-                <label style="margin-top:8px;">DNI / Documento</label>
-                <input id="cliente-doc" type="text" />
-
-                <label style="margin-top:8px;">Ingresos mensuales (opcional)</label>
-                <input id="cliente-ingresos" type="number" />
-
-                <label style="margin-top:8px;">Observaciones socio-económicas</label>
-                <textarea id="cliente-obs" rows="3"></textarea>
-
-                <div style="margin-top:8px;" class="muted">Los datos se almacenan localmente en el navegador (demo). Integra con tu backend cuando quieras.</div>
-                <div style="display:flex; gap:8px; margin-top:8px;">
-                    <button id="btn-guardar-cliente" type="button">Guardar cliente</button>
-                    <button id="btn-cargar-cliente" type="button">Cargar demo</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" style="margin-top:12px;">
-            <strong>Ficha de la unidad inmobiliaria</strong>
-            <div style="margin-top:8px;">
-                <label>Proyecto / Condominio</label><input id="inmueble-proy" />
-                <label style="margin-top:8px;">Unidad (Nº)</label><input id="inmueble-unidad" />
-                <label style="margin-top:8px;">Precio venta</label><input id="inmueble-precio" type="number" />
-                <label style="margin-top:8px;">Características</label><textarea id="inmueble-desc" rows="3"></textarea>
-                <div style="display:flex; gap:8px; margin-top:8px;">
-                    <button id="btn-guardar-inmueble">Guardar unidad</button>
-                    <button id="btn-cargar-inmueble" type="button">Cargar demo</button>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <!-- PANEL DERECHO: RESULTADOS -->
+    <!-- PANEL DERECHO: RESULTADOS + ACCIONES + REGISTROS (moved) -->
     <div>
         <div class="card">
             <div class="flex-between">
-                <strong>Resultados y indicadores</strong>
+                <strong>Resultados e indicadores</strong>
                 <div class="small">Resumen financiero</div>
             </div>
 
@@ -164,6 +128,45 @@
                 <button id="btn-limpiar">Limpiar resultados</button>
                 <button id="btn-descargar-pdf" disabled>Generar PDF (no implementado)</button>
                 <div class="note">Puedes integrar este front con tu backend: guarda clientes, inmuebles y flujos. Si quieres, preparo endpoints REST y DB.</div>
+            </div>
+        </div>
+
+        <!-- Moved: Registro de cliente -->
+        <div class="card" style="margin-top:12px;">
+            <strong>Registro de cliente</strong>
+            <div style="margin-top:8px;">
+                <label>Nombre completo</label>
+                <input id="cliente-nombre" type="text" placeholder="Ej: Juan Pérez" />
+
+                <label style="margin-top:8px;">DNI / Documento</label>
+                <input id="cliente-doc" type="text" />
+
+                <label style="margin-top:8px;">Ingresos mensuales (opcional)</label>
+                <input id="cliente-ingresos" type="number" />
+
+                <label style="margin-top:8px;">Observaciones socio-económicas</label>
+                <textarea id="cliente-obs" rows="3"></textarea>
+
+                <div style="margin-top:8px;" class="muted">Los datos se almacenan localmente en el navegador (demo). Integra con tu backend cuando quieras.</div>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <button id="btn-guardar-cliente" type="button">Guardar cliente</button>
+                    <button id="btn-cargar-cliente" type="button">Cargar demo</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Moved: Ficha de la unidad inmobiliaria -->
+        <div class="card" style="margin-top:12px;">
+            <strong>Ficha de la unidad inmobiliaria</strong>
+            <div style="margin-top:8px;">
+                <label>Proyecto / Condominio</label><input id="inmueble-proy" />
+                <label style="margin-top:8px;">Unidad (Nº)</label><input id="inmueble-unidad" />
+                <label style="margin-top:8px;">Precio venta</label><input id="inmueble-precio" type="number" />
+                <label style="margin-top:8px;">Características</label><textarea id="inmueble-desc" rows="3"></textarea>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <button id="btn-guardar-inmueble">Guardar unidad</button>
+                    <button id="btn-cargar-inmueble" type="button">Cargar demo</button>
+                </div>
             </div>
         </div>
 
