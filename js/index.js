@@ -11,9 +11,11 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+app.get('/health', (req, res) => res.json({ ok: true }));
 // Serve static files (frontend) from project root so visiting http://localhost:3001/ serves index.html
 app.use(express.static(path.join(__dirname, '..')));
 
+app.use(express.static(path.join(__dirname, '..')));
 // root route fallback: serve index.html
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'index.html'));
