@@ -1,10 +1,42 @@
 // Minimal frontend auth helper for demo backend
 // Stores { user, token } in localStorage under key "fmv_auth".
 
+// Build an absolute URL using window.API_BASE when available
+function buildUrl(path){
+    if(!path) return path;
+    if(/^https?:\/\//i.test(path)) return path; // already absolute
+    const base = (typeof window !== 'undefined' && window.API_BASE) ? String(window.API_BASE).replace(/\/$/, '') : '';
+    // ensure path starts with slash
+    if(path[0] !== '/') path = '/' + path;
+    return base + path;
+}
+
 async function apiPost(path, body){
-    const res = await fetch(path, {
+    const url = buildUrl(path);
+    const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw data;
+    return data;
+}
+
+// alias used by some pages
+async function postJson(path, body){
+    return apiPost(path, body);
+}
+
+// Authenticated POST (adds x-auth-token header)
+async function apiPostAuth(path, body){
+    const url = buildUrl(path);
+    const token = getAuthToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if(token) headers['x-auth-token'] = token;
+    const res = await fetch(url, {
+        method: 'POST',
+        headers,
         body: JSON.stringify(body)
     });
     const data = await res.json().catch(()=>({}));
@@ -64,3 +96,12 @@ if(document.readyState === 'loading'){
 } else {
     initAuthUI();
 }
+
+// Export helpers to global if needed elsewhere
+window.apiPost = apiPost;
+window.postJson = postJson;
+window.apiPostAuth = apiPostAuth;
+window.saveAuth = saveAuth;
+window.loadAuth = loadAuth;
+window.clearAuth = clearAuth;
+window.getAuthToken = getAuthToken;

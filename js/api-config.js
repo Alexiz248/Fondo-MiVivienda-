@@ -1,0 +1,1 @@
+window.API_BASE = 'https://fondo-mivivienda.onrender.com';
