@@ -81,6 +81,13 @@ function formatCurrency(v, moneda){
     return new Intl.NumberFormat('es-PE', opts).format(v);
 }
 
+// helper seguro para adjuntar listeners cuando el elemento puede no existir
+function attach(id, evt, handler){
+    const el = document.getElementById(id);
+    if(!el){ console.debug('attach: element not found', id); return; }
+    el.addEventListener(evt, handler);
+}
+
 // Small helper to POST with X-Auth-Token header when available (frontend uses js/auth.js)
 async function apiPostAuth(path, body){
     const headers = { 'Content-Type': 'application/json' };
@@ -99,7 +106,9 @@ async function apiPostAuth(path, body){
 /* -------------------------
   Lógica principal: cálculo
 --------------------------*/
-document.getElementById('btn-calcular').addEventListener('click', calcular);
+// document.getElementById('btn-calcular').addEventListener('click', calcular);
+
+// Listener de 'btn-calcular' se añade de forma segura en ensureEssentialListeners/forceAttachHandlers
 
 // Versión mejorada de calcular() con logs, comprobaciones y setKPI seguro
 function calcular(){
@@ -135,62 +144,75 @@ function calcular(){
     if(tipoGracia === 'total' && mesesGracia > 0 && capitalizaGracia){
         let interes_acum = 0;
         for(let m=0;m<mesesGracia;m++){
-            const interes = saldo * i_periodo;
+            const saldo_inicial = saldo;
+            const interes = saldo_inicial * i_periodo;
             interes_acum += interes;
-            rows.push({periodo: periodo, pago:0, interes:interes, amort:0, capital:saldo, saldo: saldo});
+            // en gracia total sin pagos
+            rows.push({periodo: periodo, pago:0, interes:interes, amort:0, cuota:null, saldo_inicial: saldo_inicial, saldo_final: saldo});
             periodo++;
         }
         saldo += interes_acum;
         const n_restante = Math.max(1, plazo - mesesGracia);
         const cuota = cuotaFrances(saldo, i_periodo, n_restante);
         for(let p=0;p<n_restante;p++){
-            const interes = saldo * i_periodo;
+            const saldo_inicial = saldo;
+            const interes = saldo_inicial * i_periodo;
             const amort = cuota - interes;
             const pago = cuota;
-            saldo = round(saldo - amort, 10);
-            rows.push({periodo: periodo, pago, interes, amort, capital: null, saldo: Math.max(0, round(saldo,2))});
+            const saldo_final = Math.max(0, round(saldo_inicial - amort, 10));
+            saldo = round(saldo_final, 10);
+            rows.push({periodo: periodo, pago, interes, amort, cuota, saldo_inicial: saldo_inicial, saldo_final: Math.max(0, round(saldo,2))});
             periodo++;
         }
     } else if(tipoGracia === 'total' && mesesGracia > 0 && !capitalizaGracia){
         for(let m=0;m<mesesGracia;m++){
-            rows.push({periodo: periodo, pago:0, interes:0, amort:0, capital:saldo, saldo: saldo});
+            const saldo_inicial = saldo;
+            rows.push({periodo: periodo, pago:0, interes:0, amort:0, cuota:null, saldo_inicial: saldo_inicial, saldo_final: saldo});
             periodo++;
         }
         const n_restante = Math.max(1, plazo - mesesGracia);
         const cuota = cuotaFrances(saldo, i_periodo, n_restante);
         for(let p=0;p<n_restante;p++){
-            const interes = saldo * i_periodo;
+            const saldo_inicial = saldo;
+            const interes = saldo_inicial * i_periodo;
             const amort = cuota - interes;
             const pago = cuota;
-            saldo = round(saldo - amort, 10);
-            rows.push({periodo: periodo, pago, interes, amort, capital: null, saldo: Math.max(0, round(saldo,2))});
+            const saldo_final = Math.max(0, round(saldo_inicial - amort, 10));
+            saldo = round(saldo_final, 10);
+            rows.push({periodo: periodo, pago, interes, amort, cuota, saldo_inicial: saldo_inicial, saldo_final: Math.max(0, round(saldo,2))});
             periodo++;
         }
     } else if(tipoGracia === 'partial' && mesesGracia > 0){
         for(let m=0;m<mesesGracia;m++){
-            const interes = saldo * i_periodo;
+            const saldo_inicial = saldo;
+            const interes = saldo_inicial * i_periodo;
             const pago = interes;
-            rows.push({periodo: periodo, pago: round(pago,2), interes: round(interes,2), amort:0, capital:saldo, saldo:saldo});
+            // en gracia parcial se paga solo interés
+            rows.push({periodo: periodo, pago: round(pago,2), interes: round(interes,2), amort:0, cuota:null, saldo_inicial: saldo_inicial, saldo_final: saldo});
             periodo++;
         }
         const n_restante = Math.max(1, plazo - mesesGracia);
         const cuota = cuotaFrances(saldo, i_periodo, n_restante);
         for(let p=0;p<n_restante;p++){
-            const interes = saldo * i_periodo;
+            const saldo_inicial = saldo;
+            const interes = saldo_inicial * i_periodo;
             const amort = cuota - interes;
             const pago = cuota;
-            saldo = round(saldo - amort, 10);
-            rows.push({periodo: periodo, pago, interes, amort, capital: null, saldo: Math.max(0, round(saldo,2))});
+            const saldo_final = Math.max(0, round(saldo_inicial - amort, 10));
+            saldo = round(saldo_final, 10);
+            rows.push({periodo: periodo, pago, interes, amort, cuota, saldo_inicial: saldo_inicial, saldo_final: Math.max(0, round(saldo,2))});
             periodo++;
         }
     } else {
         const cuota = cuotaFrances(saldo, i_periodo, plazo);
         for(let p=0;p<plazo;p++){
-            const interes = saldo * i_periodo;
+            const saldo_inicial = saldo;
+            const interes = saldo_inicial * i_periodo;
             const amort = cuota - interes;
             const pago = cuota;
-            saldo = round(saldo - amort, 10);
-            rows.push({periodo: periodo, pago, interes, amort, capital: null, saldo: Math.max(0, round(saldo,2))});
+            const saldo_final = Math.max(0, round(saldo_inicial - amort, 10));
+            saldo = round(saldo_final, 10);
+            rows.push({periodo: periodo, pago, interes, amort, cuota, saldo_inicial: saldo_inicial, saldo_final: Math.max(0, round(saldo,2))});
             periodo++;
         }
     }
@@ -206,11 +228,11 @@ function calcular(){
 
     const tbodyHTML = rows.map(r=>`<tr>
       <td class="left">${r.periodo}</td>
-      <td>${formatCurrency(r.pago || 0, moneda)}</td>
+      <td>${formatCurrency(r.saldo_inicial || 0, moneda)}</td>
       <td>${formatCurrency(r.interes || 0, moneda)}</td>
       <td>${formatCurrency(r.amort || 0, moneda)}</td>
-      <td>${formatCurrency(r.capital || 0, moneda)}</td>
-      <td>${formatCurrency(r.saldo || 0, moneda)}</td>
+      <td>${formatCurrency(r.cuota || 0, moneda)}</td>
+      <td>${formatCurrency(r.saldo_final || 0, moneda)}</td>
     </tr>`).join('');
     document.getElementById('tbody-amort').innerHTML = tbodyHTML;
 
@@ -263,115 +285,132 @@ function calcular(){
     })();
 
     console.log('calcular: fin', {cuotaProm, costoTotal, van, tir_anual});
+
+    // asegurar que el recuadro del dashboard esté sincronizado
+    try{ updateCuotaFijaDisplay(); }catch(e){}
 }
 
 /* -------------------------
  Export CSV (amort table)
 --------------------------*/
-document.getElementById('btn-export').addEventListener('click', function(){
-    const data = window.__lastCalc;
-    if(!data){ alert('Primero calcula.'); return; }
-    const rows = data.rows;
-    const lines = [['Periodo','Pago','Interés','Amortización','Capital','Saldo']];
-
-    rows.forEach(r=>{
-        lines.push([r.periodo,r.pago,r.interes,r.amort,r.capital,r.saldo]);
-    });
-    const csv = lines.map(r=>r.map(c=>String(c).replace(/"/g,'""')).map(c=>`"${c}"`).join(',')).join('\n');
-    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'tabla_amortizacion.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-});
+// Handler de export CSV se registra de forma segura en el bloque de attach/ensureEssentialListeners
 
 /* -------------------------
   Guardar / cargar cliente e inmueble
 --------------------------*/
-document.getElementById('btn-guardar-cliente').addEventListener('click', ()=>{
-    const c = {
-        nombre: document.getElementById('cliente-nombre').value,
-        doc: document.getElementById('cliente-doc').value,
-        ingresos: document.getElementById('cliente-ingresos').value,
-        obs: document.getElementById('cliente-obs').value
-    };
-    // try saving to backend; fallback to localStorage
-    (async ()=>{
-        try{
-            await apiPostAuth('/api/clientes', c);
-            alert('Cliente guardado en backend.');
-        }catch(e){
-            localStorage.setItem('demo_cliente', JSON.stringify(c));
-            alert('Cliente guardado localmente (demo). Si quieres persistir en servidor, inicia sesión.');
-        }
-    })();
-});
+// Guardar cliente: manejador registrado en attach/ensureEssentialListeners
 
-document.getElementById('btn-cargar-cliente').addEventListener('click', ()=>{
-    const s = localStorage.getItem('demo_cliente');
-    if(!s){
-        // cargar demo por defecto
-        document.getElementById('cliente-nombre').value = 'Juan Pérez';
-        document.getElementById('cliente-doc').value = '12345678';
-        document.getElementById('cliente-ingresos').value = 3500;
-        document.getElementById('cliente-obs').value = 'Cliente interesado en departamento 3B, perfil familiar.';
-        alert('Demo cargada en formularios.');
-        return;
+// Cargar cliente: manejador registrado en attach/ensureEssentialListeners
+
+// Guardar inmueble: manejador registrado en attach/ensureEssentialListeners
+
+// Cargar inmueble: manejador registrado en attach/ensureEssentialListeners
+
+/* -------------------------
+ Limpiar resultados y formularios
+--------------------------*/
+// Listener eliminado aquí: se añade de forma controlada en ensureEssentialListeners()
+
+// Mostrar tasa efectiva mensual derivada de los inputs de tasa
+function updateTasaMensualDisplay(){
+    try{
+        const tasaAnual = toNumber(document.getElementById('input-tasa').value);
+        const tipoTasa = document.getElementById('cfg-tipo-tasa').value;
+        const capAnual = Number(document.getElementById('cfg-capitalizacion').value);
+        const i_periodo = periodicRateFromInputs(tasaAnual, tipoTasa, capAnual);
+        const el = document.getElementById('input-tasa-mensual');
+        if(!el){ setDebugStatus('input-tasa-mensual', 'not found'); return; }
+        // mostrar como porcentaje con 4 decimales
+        if(!isFinite(i_periodo)) el.value = '-';
+        else el.value = (i_periodo * 100).toFixed(4) + ' %';
+        console.debug('updateTasaMensualDisplay:', {tasaAnual, tipoTasa, capAnual, i_periodo});
+        setDebugStatus('tasaAnual', tasaAnual);
+        setDebugStatus('i_periodo', (isFinite(i_periodo) ? (i_periodo*100).toFixed(6) + '%' : 'NaN'));
+        setDebugStatus('input-tasa-handler', 'fired');
+    }catch(e){
+        // fallback silencioso
+        console.warn('updateTasaMensualDisplay error', e);
+        setDebugStatus('updateTasaMensualDisplay', 'error');
     }
-    const c = JSON.parse(s);
-    document.getElementById('cliente-nombre').value = c.nombre;
-    document.getElementById('cliente-doc').value = c.doc;
-    document.getElementById('cliente-ingresos').value = c.ingresos;
-    document.getElementById('cliente-obs').value = c.obs;
-    alert('Cliente cargado desde demo local.');
-});
+}
 
-document.getElementById('btn-guardar-inmueble').addEventListener('click', ()=>{
-    const i = {
-        proyecto: document.getElementById('inmueble-proy').value,
-        unidad: document.getElementById('inmueble-unidad').value,
-        precio: document.getElementById('inmueble-precio').value,
-        desc: document.getElementById('inmueble-desc').value
-    };
-    (async ()=>{
-        try{
-            await apiPostAuth('/api/inmuebles', i);
-            alert('Unidad guardada en backend.');
-        }catch(e){
-            localStorage.setItem('demo_inmueble', JSON.stringify(i));
-            alert('Unidad guardada localmente (demo). Inicia sesión para guardar en servidor.');
+// Calcula y muestra la cuota fija mensual según capitalizado en gracia
+function updateCuotaFijaDisplay(){
+    try{
+        const principal = toNumber(document.getElementById('input-principal').value);
+        const tasaAnual = toNumber(document.getElementById('input-tasa').value);
+        const tipoTasa = document.getElementById('cfg-tipo-tasa').value;
+        const capAnual = Number(document.getElementById('cfg-capitalizacion').value);
+        const tipoGracia = document.getElementById('input-gracia') ? document.getElementById('input-gracia').value : 'none';
+        const mesesGracia = Math.max(0, Math.floor(Number(document.getElementById('input-meses-gracia').value)));
+        const capitalizaGracia = document.getElementById('input-capitaliza-gracia') ? (document.getElementById('input-capitaliza-gracia').value === 'si') : false;
+        const plazo = Math.max(1, Math.floor(Number(document.getElementById('input-plazo').value) || 0));
+
+        const i_periodo = periodicRateFromInputs(tasaAnual, tipoTasa, capAnual);
+        const tea_from_i = Math.pow(1 + i_periodo, 12) - 1;
+        const el = document.getElementById('input-cuota-fija');
+        const elMensual = document.getElementById('input-cuota-fija-mensual');
+        if(!el) return;
+
+        // Determinar monto capitalizado: si hay gracia total y se capitaliza, aplicar capitalización; en otros casos queda igual
+        let montoCapitalizado = principal;
+        if(tipoGracia === 'total' && capitalizaGracia && mesesGracia > 0 && isFinite(i_periodo)){
+            montoCapitalizado = principal * Math.pow(1 + i_periodo, mesesGracia);
         }
-    })();
-});
 
-document.getElementById('btn-cargar-inmueble').addEventListener('click', ()=>{
-    const s = localStorage.getItem('demo_inmueble');
-    if(!s){
-        document.getElementById('inmueble-proy').value = 'Condominio Los Olivos';
-        document.getElementById('inmueble-unidad').value = 'A-302';
-        document.getElementById('inmueble-precio').value = 200000;
-        document.getElementById('inmueble-desc').value = 'Departamento 3D, 2 dormitorios, 2 baños.';
-        alert('Demo de unidad cargada.');
-        return;
-    }
-    const i = JSON.parse(s);
-    document.getElementById('inmueble-proy').value = i.proyecto;
-    document.getElementById('inmueble-unidad').value = i.unidad;
-    document.getElementById('inmueble-precio').value = i.precio;
-    document.getElementById('inmueble-desc').value = i.desc;
-    alert('Unidad cargada desde demo local.');
-});
+        // Mostrar monto capitalizado
+        el.value = (isFinite(montoCapitalizado) ? formatCurrency(round(montoCapitalizado,2), document.getElementById('cfg-moneda').value) : '-');
 
-document.getElementById('btn-limpiar').addEventListener('click', ()=>{
-    document.getElementById('tbody-amort').innerHTML = '';
-    ['k-cuota','k-costo','k-tea','k-van','k-tir','k-neto'].forEach(id=>document.getElementById(id).innerText='-');
-    window.__lastCalc = null;
-    document.getElementById('btn-export').disabled = true;
-});
-// javascript
-// Inserta este bloque al final de `js/scripts.js`
+        // Ahora calcular la cuota fija mensual con método francés sobre el montoCapitalizado
+        const n_restante = Math.max(1, plazo - mesesGracia);
+        let cuotaMensual = NaN;
+        let pow = NaN;
+        if(isFinite(i_periodo) && montoCapitalizado > 0 && n_restante > 0){
+            if(i_periodo === 0){
+                cuotaMensual = montoCapitalizado / n_restante;
+            } else {
+                // Forma equivalente: A = P * (i*(1+i)^n) / ((1+i)^n - 1)
+                pow = Math.pow(1 + i_periodo, n_restante);
+                cuotaMensual = montoCapitalizado * (i_periodo * pow) / (pow - 1);
+            }
+        }
+
+        if(elMensual){
+            elMensual.value = (isFinite(cuotaMensual) ? formatCurrency(round(cuotaMensual,2), document.getElementById('cfg-moneda').value) : '-');
+        }
+
+        // Diagnostic logs for user debugging
+        console.debug('updateCuotaFijaDisplay debug', {
+            principal, tasaAnual, tipoTasa, capAnual, i_periodo, tea_from_i,
+            tipoGracia, capitalizaGracia, mesesGracia, montoCapitalizado, plazo, n_restante, pow, cuotaMensual
+        });
+
+        // recuadro eliminado: no actualizar elementos de resumen aquí
+
+    }catch(e){ console.warn('updateCuotaFijaDisplay error', e); if(document.getElementById('input-cuota-fija-mensual')) document.getElementById('input-cuota-fija-mensual').value='-'; }
+}
+
+// Debug panel helper (disabled): reemplazado por no-op para quitar FMDebug
+function ensureDebugPanel(){ return null; }
+function setDebugStatus(key, value){ /* debug panel desactivado */ }
+
+// NOTE: El binding directo de btn-limpiar fue eliminado para evitar duplicados;
+// el listener se añade de forma controlada en ensureEssentialListeners().
+
+// listeners: cuando cambie la tasa anual, el tipo (efectiva/nominal) o capitalización
+const tasaInput = document.getElementById('input-tasa');
+if(tasaInput) tasaInput.addEventListener('input', updateTasaMensualDisplay);
+const tipoSelect = document.getElementById('cfg-tipo-tasa');
+if(tipoSelect) tipoSelect.addEventListener('change', updateTasaMensualDisplay);
+const capSelect = document.getElementById('cfg-capitalizacion');
+if(capSelect) capSelect.addEventListener('change', updateTasaMensualDisplay);
+
+// inicializar display al cargar
+if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', updateTasaMensualDisplay);
+} else {
+    updateTasaMensualDisplay();
+}
 
 // 1) Añadir CSS para tooltips (auto-inyectado)
 (function addKpiTooltipStyles(){
@@ -461,12 +500,12 @@ document.getElementById('btn-limpiar').addEventListener('click', ()=>{
     document.head.appendChild(s);
 
     const tips = {
-        'Pago': `Pago total del periodo:\nIncluye Interés + Amortización.`,
+        'Saldo inicial': `Saldo inicial del periodo:\nSaldo con el que arranca el periodo (principal pendiente antes de amortización).`,
         'Interés': `Interés del periodo:\nInterés = Saldo_{anterior} * i_periodo\n(i_periodo = tasa periódica mensual en decimal).`,
         'Amortización': `Amortización del periodo:\nAmort = Pago - Interés\nReduce el saldo del préstamo.`,
-        'Capital': `Columna 'Capital':\nSiempre 0 en este esquema (columna reservada para otros usos).`,
-        'Saldo': `Saldo pendiente:\nSaldo_{t} = Saldo_{t-1} - Amortización_{t}\nMonto de principal que queda por pagar.`
-    };
+        'Cuota': `Columna 'Cuota':\nCuota fija calculada por el método francés (A). En periodos de gracia mostrará 0 o el pago efectivo si aplica.`,
+        'Saldo final': `Saldo final del periodo:\nSaldo después de aplicar la amortización del periodo.`
+     };
 
     function applyTips(){
         const ths = document.querySelectorAll('#tabla-amort thead th');
@@ -486,5 +525,136 @@ document.getElementById('btn-limpiar').addEventListener('click', ()=>{
         document.addEventListener('DOMContentLoaded', applyTips);
     } else {
         applyTips();
+    }
+})();
+
+// Safety: asegurar listeners esenciales al cargar el DOM (previene casos donde el script corrió antes que el DOM)
+function ensureEssentialListeners(){
+    try{
+        const tasaInput = document.getElementById('input-tasa');
+        if(tasaInput && !tasaInput.__listenerAttached){
+            tasaInput.addEventListener('input', updateTasaMensualDisplay);
+            tasaInput.addEventListener('input', updateCuotaFijaDisplay);
+            tasaInput.__listenerAttached = true;
+            console.debug('listener attached: input-tasa');
+        }
+        const tipoSelect = document.getElementById('cfg-tipo-tasa');
+        if(tipoSelect && !tipoSelect.__listenerAttached){
+            tipoSelect.addEventListener('change', function(){ updateTasaMensualDisplay(); updateCuotaFijaDisplay(); });
+            tipoSelect.__listenerAttached = true;
+            console.debug('listener attached: cfg-tipo-tasa');
+        }
+        const capSelect = document.getElementById('cfg-capitalizacion');
+        if(capSelect && !capSelect.__listenerAttached){
+            capSelect.addEventListener('change', function(){ updateTasaMensualDisplay(); updateCuotaFijaDisplay(); });
+            capSelect.__listenerAttached = true;
+            console.debug('listener attached: cfg-capitalizacion');
+        }
+        const principal = document.getElementById('input-principal');
+        if(principal && !principal.__listenerAttached){
+            principal.addEventListener('input', updateCuotaFijaDisplay);
+            principal.__listenerAttached = true;
+            console.debug('listener attached: input-principal');
+        }
+        const meses = document.getElementById('input-meses-gracia');
+        if(meses && !meses.__listenerAttached){
+            meses.addEventListener('input', updateCuotaFijaDisplay);
+            meses.__listenerAttached = true;
+            console.debug('listener attached: input-meses-gracia');
+        }
+        const tipoGraciaEl = document.getElementById('input-gracia');
+        if(tipoGraciaEl && !tipoGraciaEl.__listenerAttached){
+            tipoGraciaEl.addEventListener('change', updateCuotaFijaDisplay);
+            tipoGraciaEl.__listenerAttached = true;
+            console.debug('listener attached: input-gracia');
+        }
+        const capGraciaEl = document.getElementById('input-capitaliza-gracia');
+        if(capGraciaEl && !capGraciaEl.__listenerAttached){
+            capGraciaEl.addEventListener('change', updateCuotaFijaDisplay);
+            capGraciaEl.__listenerAttached = true;
+            console.debug('listener attached: input-capitaliza-gracia');
+        }
+        const plazoEl = document.getElementById('input-plazo');
+        if(plazoEl && !plazoEl.__listenerAttached){
+            plazoEl.addEventListener('input', updateCuotaFijaDisplay);
+            plazoEl.__listenerAttached = true;
+            console.debug('listener attached: input-plazo');
+        }
+        const btnLimpiar = document.getElementById('btn-limpiar');
+        if(btnLimpiar && !btnLimpiar.__listenerAttached){
+            btnLimpiar.addEventListener('click', ()=>{
+                const tbody = document.getElementById('tbody-amort'); if(tbody) tbody.innerHTML = '';
+                ['k-cuota','k-costo','k-tea','k-van','k-tir','k-neto'].forEach(id=>{ const el = document.getElementById(id); if(el) el.innerText = '-'; });
+                window.__lastCalc = null;
+                const btnExport = document.getElementById('btn-export'); if(btnExport) btnExport.disabled = true;
+            });
+            btnLimpiar.__listenerAttached = true;
+            console.debug('listener attached: btn-limpiar');
+        }
+        // Asegurar que 'Calcular' está vinculado
+        const btnCalc = document.getElementById('btn-calcular');
+        if(btnCalc && !btnCalc.__listenerAttached){
+            btnCalc.addEventListener('click', calcular);
+            btnCalc.__listenerAttached = true;
+            console.debug('listener attached: btn-calcular');
+        }
+
+        // Inicializar visualización
+        updateTasaMensualDisplay();
+        updateCuotaFijaDisplay();
+    }catch(e){
+        // silencioso
+        console.warn('ensureEssentialListeners failed', e);
+    }
+}
+
+// Diagnóstico y fuerza de attach (idempotente)
+(function forceAttachHandlers(){
+    try{
+        const ids = ['input-tasa','input-tasa-mensual','cfg-tipo-tasa','cfg-capitalizacion','btn-calcular','btn-limpiar','btn-export','input-principal','input-meses-gracia','input-gracia','input-capitaliza-gracia','input-plazo'];
+        ids.forEach(id=>{
+            const el = document.getElementById(id);
+            console.debug('startup check', id, !!el, el ? el.tagName : null);
+            setDebugStatus(id + '-exists', !!el);
+        });
+
+        const tasa = document.getElementById('input-tasa');
+        if(tasa){
+            tasa.oninput = function(){ updateTasaMensualDisplay(); updateCuotaFijaDisplay(); };
+        }
+        const tipo = document.getElementById('cfg-tipo-tasa');
+        if(tipo){ tipo.onchange = function(){ updateTasaMensualDisplay(); updateCuotaFijaDisplay(); }; }
+        const cap = document.getElementById('cfg-capitalizacion');
+        if(cap){ cap.onchange = function(){ updateTasaMensualDisplay(); updateCuotaFijaDisplay(); }; }
+
+        const principal = document.getElementById('input-principal');
+        if(principal){ principal.oninput = updateCuotaFijaDisplay; }
+        const meses = document.getElementById('input-meses-gracia');
+        if(meses){ meses.oninput = updateCuotaFijaDisplay; }
+        const graciaSel = document.getElementById('input-gracia');
+        if(graciaSel){ graciaSel.onchange = updateCuotaFijaDisplay; }
+        const capGraciaSel = document.getElementById('input-capitaliza-gracia');
+        if(capGraciaSel){ capGraciaSel.onchange = updateCuotaFijaDisplay; }
+        const plazoEl = document.getElementById('input-plazo');
+        if(plazoEl){ plazoEl.oninput = updateCuotaFijaDisplay; }
+
+        const btnCalc = document.getElementById('btn-calcular');
+        if(btnCalc){ btnCalc.onclick = calcular; }
+
+        const btnLimpiar = document.getElementById('btn-limpiar');
+        if(btnLimpiar){
+            btnLimpiar.onclick = function(){
+                const tbody = document.getElementById('tbody-amort'); if(tbody) tbody.innerHTML = '';
+                ['k-cuota','k-costo','k-tea','k-van','k-tir','k-neto'].forEach(id=>{ const el = document.getElementById(id); if(el) el.innerText = '-'; });
+                window.__lastCalc = null;
+                const btnExport = document.getElementById('btn-export'); if(btnExport) btnExport.disabled = true;
+                console.debug('btn-limpiar onclick triggered');
+                setDebugStatus('btn-limpiar-onclick', 'triggered');
+            };
+        }
+
+        console.debug('forceAttachHandlers: done');
+    }catch(e){
+        console.warn('forceAttachHandlers failed', e);
     }
 })();

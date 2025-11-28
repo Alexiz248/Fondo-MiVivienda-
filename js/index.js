@@ -43,13 +43,13 @@ async function findUserByToken(token){
 
 // Register
 app.post('/api/register', async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, dni } = req.body;
   if(!email || !password) return res.status(400).json({ error: 'email and password required' });
   await db.read();
   const exists = db.data.users.find(u => u.email === email.toLowerCase());
   if(exists) return res.status(409).json({ error: 'user_exists' });
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = { id: nanoid(), name: name || '', email: email.toLowerCase(), passwordHash, role: 'user', createdAt: new Date().toISOString() };
+  const user = { id: nanoid(), name: name || '', email: email.toLowerCase(), passwordHash, dni: dni || null, role: 'user', createdAt: new Date().toISOString() };
   db.data.users.push(user);
   await db.write();
   const { passwordHash: _, ...safe } = user;
@@ -58,13 +58,20 @@ app.post('/api/register', async (req, res) => {
 
 // Login
 app.post('/api/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, dni } = req.body;
   if(!email || !password) return res.status(400).json({ error: 'email and password required' });
   await db.read();
   const user = db.data.users.find(u => u.email === email.toLowerCase());
   if(!user) return res.status(401).json({ error: 'invalid_credentials' });
   const ok = await bcrypt.compare(password, user.passwordHash);
   if(!ok) return res.status(401).json({ error: 'invalid_credentials' });
+  // If user has a stored dni, require match when provided
+  if(user.dni && dni && String(user.dni) !== String(dni)){
+    return res.status(401).json({ error: 'invalid_dni' });
+  }
+  if(user.dni && !dni){
+    // prefer that client sends dni — but allow if not provided
+  }
   // Simple session token (not JWT) — for demo only
   const token = nanoid(24);
   db.data.operations.push({ id: nanoid(), type: 'login', userId: user.id, token, at: new Date().toISOString() });

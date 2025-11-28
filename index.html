@@ -1,4 +1,3 @@
-<!-- html -->
 <!doctype html>
 <html lang="es">
 <head>
@@ -8,173 +7,146 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<!-- Auth bar: Login / Register -->
+<script>
+  // Si no hay auth en localStorage, redirigir al login
+  try{
+    const isLoginPage = location.pathname && location.pathname.toLowerCase().endsWith('login.html');
+    const auth = localStorage.getItem('fmv_auth');
+    if(!isLoginPage && (!auth || auth === 'null')){
+      window.location.href = 'login.html';
+    }
+  }catch(e){}
+</script>
+
+<!-- Barra de autenticación (solo usuario/logout en la app principal) -->
 <div id="auth-bar" style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px;">
-    <div id="auth-guest">
-        <button id="btn-open-login" style="background:#0f172a11; color:var(--accent); border:1px solid var(--accent); padding:8px 12px; border-radius:8px;">Login</button>
-        <button id="btn-open-register" style="background:var(--accent); color:#fff; padding:8px 12px; border-radius:8px;">Register</button>
-    </div>
-    <div id="auth-user" style="display:none; align-items:center; gap:8px;">
-        <span id="auth-username" class="small"></span>
-        <button id="btn-logout" style="background:#e11d48; padding:8px 12px; border-radius:8px;">Cerrar sesión</button>
-    </div>
+  <div id="auth-user" style="display:none; align-items:center; gap:8px;">
+    <span id="auth-username" class="small"></span>
+    <button id="btn-logout" style="background:#e11d48; padding:8px 12px; border-radius:8px;">Cerrar sesión</button>
+  </div>
 </div>
 
-<h1>Simulador Crédito MiVivienda — Método Francés (vencido, meses de 30 días)</h1>
-<p class="muted">Interfaz demo para cabinas de venta. Incluye configuraciones, registro de cliente y unidad, cálculo de tabla de amortización, VAN y TIR. <em>Ahora con login/register y persistencia demo en `db.json`.</em></p>
+<main style="padding:8px;">
+  <h1>Simulador Crédito MiVivienda — Método Francés</h1>
+  <p class="muted">Interfaz demo para cabinas de venta. Ahora con login/register y persistencia demo en <code>db.json</code>.</p>
 
-<div class="layout">
+  <div class="layout">
     <!-- PANEL IZQUIERDO: CONFIG -->
     <div>
-        <div class="card">
-            <div class="flex-between"><strong>Configuración del préstamo</strong><span class="small">ajustes globales</span></div>
-            <div style="margin-top:10px;">
-                <label>Moneda</label>
-                <select id="cfg-moneda"><option value="PEN">Soles (PEN)</option><option value="USD">Dólares (USD)</option></select>
+      <div class="card">
+        <div class="flex-between"><strong>Configuración del préstamo</strong><span class="small">ajustes</span></div>
+        <div style="margin-top:10px;">
+          <label for="cfg-moneda">Moneda</label>
+          <select id="cfg-moneda"><option value="PEN">Soles (PEN)</option><option value="USD">Dólares (USD)</option></select>
 
-                <label style="margin-top:8px;">Tipo de tasa</label>
-                <select id="cfg-tipo-tasa">
-                    <option value="efectiva">Efectiva anual</option>
-                    <option value="nominal">Nominal anual</option>
-                </select>
+          <label for="cfg-tipo-tasa" style="margin-top:8px;">Tipo de tasa</label>
+          <select id="cfg-tipo-tasa">
+            <option value="efectiva">Efectiva anual</option>
+            <option value="nominal">Nominal anual</option>
+          </select>
 
-                <label style="margin-top:8px;">Si nominal: capitalización por año</label>
-                <select id="cfg-capitalizacion">
-                    <option value="12">12 (mensual)</option>
-                    <option value="6">6 (bimestral)</option>
-                    <option value="4">4 (trimestral)</option>
-                    <option value="360">360 (diaria, meses 30d)</option>
-                </select>
+          <label for="cfg-capitalizacion" style="margin-top:8px;">Si nominal: capitalización por año</label>
+          <select id="cfg-capitalizacion">
+            <option value="12">12 (mensual)</option>
+            <option value="6">6 (bimestral)</option>
+            <option value="4">4 (trimestral)</option>
+            <option value="360">360 (diaria)</option>
+          </select>
 
-                <label style="margin-top:8px;">Plazo total (meses de 30 días)</label>
-                <input id="input-plazo" type="number" value="240" min="1" />
+          <label for="input-plazo" style="margin-top:8px;">Plazo total (meses)</label>
+          <input id="input-plazo" type="number" value="240" min="1" />
 
-                <label style="margin-top:8px;">Tasa (por ejemplo: 8.5 para 8.5%)</label>
-                <input id="input-tasa" type="number" step="0.0001" value="8.5" />
+          <label for="input-tasa" style="margin-top:8px;">Tasa anual (%)</label>
+          <input id="input-tasa" type="number" step="0.0001" value="8.5" />
 
-                <label style="margin-top:8px;">Capital solicitado (monto del préstamo)</label>
-                <input id="input-principal" type="number" step="0.01" value="120000" />
+          <!-- Campo calculado: tasa efectiva mensual -->
+          <label for="input-tasa-mensual" style="margin-top:6px;">Tasa efectiva mensual (%)</label>
+          <input id="input-tasa-mensual" type="text" readonly value="-" />
 
-                <label style="margin-top:8px;">Bono Techo Propio (opcional)</label>
-                <input id="input-bono" type="number" step="0.01" value="0" />
+          <label for="input-principal" style="margin-top:8px;">Capital solicitado</label>
+          <input id="input-principal" type="number" step="0.01" value="120000" />
 
-                <label style="margin-top:8px;">Periodo de gracia</label>
-                <select id="input-gracia">
-                    <option value="none">Sin gracia</option>
-                    <option value="partial">Parcial (pago solo intereses durante gracia)</option>
-                    <option value="total">Total (no paga cuotas; intereses opcionalmente capitalizables)</option>
-                </select>
+          <!-- Campo calculado: monto capitalizado y cuota fija mensual -->
+          <label for="input-cuota-fija" style="margin-top:6px;">Monto capitalizado</label>
+          <input id="input-cuota-fija" type="text" readonly value="-" />
 
-                <label style="margin-top:8px;">Meses de gracia</label>
-                <input id="input-meses-gracia" type="number" min="0" value="0" />
+          <label for="input-cuota-fija-mensual" style="margin-top:6px;">Cuota fija mensual</label>
+          <input id="input-cuota-fija-mensual" type="text" readonly value="-" />
 
-                <label style="margin-top:8px;">Si gracia total: capitalizar intereses?</label>
-                <select id="input-capitaliza-gracia">
-                    <option value="no">No capitalizar (intereses no sumados al principal)</option>
-                    <option value="si">Sí, capitalizar (intereses se suman al capital al final del periodo de gracia)</option>
-                </select>
+          <label for="input-bono" style="margin-top:8px;">Bono (opcional)</label>
+          <input id="input-bono" type="number" step="0.01" value="0" />
 
-                <label style="margin-top:8px;">Tasa descuento para VAN (ej: 6% anual)</label>
-                <input id="input-tasa-descuento" type="number" value="6" step="0.0001" />
+          <label for="input-gracia" style="margin-top:8px;">Periodo de gracia</label>
+          <select id="input-gracia">
+            <option value="none">Sin gracia</option>
+            <option value="partial">Parcial</option>
+            <option value="total">Total</option>
+          </select>
 
-                <div class="controls">
-                    <button id="btn-calcular">Calcular</button>
-                    <button id="btn-export" type="button">Exportar CSV</button>
-                </div>
+          <label for="input-meses-gracia" style="margin-top:8px;">Meses de gracia</label>
+          <input id="input-meses-gracia" type="number" min="0" value="0" />
 
-                <p class="note">Suposiciones: meses de 30 días → 12 periodos por año. Método francés = cuota fija (vencida). En gracia parcial se paga solo interés; en gracia total puede capitalizarse si así lo indicas.</p>
-            </div>
+          <label for="input-capitaliza-gracia" style="margin-top:8px;">Capitalizar intereses en gracia total?</label>
+          <select id="input-capitaliza-gracia">
+            <option value="no">No</option>
+            <option value="si">Sí</option>
+          </select>
+
+          <label for="input-tasa-descuento" style="margin-top:8px;">Tasa descuento VAN (%)</label>
+          <input id="input-tasa-descuento" type="number" value="6" step="0.0001" />
+
+          <div class="controls" style="margin-top:12px; display:flex; gap:8px;">
+            <button id="btn-calcular">Calcular</button>
+            <button id="btn-limpiar">Limpiar resultados</button>
+            <button id="btn-export" type="button">Exportar CSV</button>
+          </div>
         </div>
+      </div>
     </div>
 
-    <!-- PANEL DERECHO: RESULTADOS + ACCIONES + REGISTROS (moved) -->
+    <!-- PANEL DERECHO: RESULTADOS -->
     <div>
-        <div class="card">
-            <div class="flex-between">
-                <strong>Resultados e indicadores</strong>
-                <div class="small">Resumen financiero</div>
-            </div>
+      <div class="card">
+        <div class="flex-between"><strong>Resultados e indicadores</strong><div class="small">Resumen</div></div>
 
-            <div class="indicators" id="indicators">
-                <div class="kpi"><div class="small">Cuota mensual</div><div class="num" id="k-cuota">-</div></div>
-                <div class="kpi"><div class="small">Costo total del crédito</div><div class="num" id="k-costo">-</div></div>
-                <div class="kpi"><div class="small">Tasa Efectiva Anual</div><div class="num" id="k-tea">-</div></div>
-                <div class="kpi"><div class="small">VAN (a tasa descuento)</div><div class="num" id="k-van">-</div></div>
-                <div class="kpi"><div class="small">TIR (IRR)</div><div class="num" id="k-tir">-</div></div>
-                <div class="kpi"><div class="small">Monto neto recibido</div><div class="num" id="k-neto">-</div></div>
-            </div>
-
-            <div id="tabla-wrapper" style="margin-top:12px;">
-                <div class="flex-between"><strong>Tabla de amortización</strong><div class="small">exportable</div></div>
-                <div id="tabla-contenedor" style="overflow:auto; max-height:420px; margin-top:8px;">
-                    <table id="tabla-amort" style="min-width:900px;">
-                        <thead><tr>
-                            <th>Período</th><th>Pago</th><th>Interés</th><th>Amortización</th><th>Capital</th><th>Saldo</th>
-                        </tr></thead>
-                        <tbody id="tbody-amort"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div style="margin-top:10px;">
-                <strong>Notas de transparencia</strong>
-                <p class="small">El sistema entrega la cuota, costo total, VAN y TIR en base a los parámetros indicados. Para cumplir la norma de transparencia se debe complementar con comisiones y seguros reales (aquí solo se muestra cálculo base). Integra los cargos adicionales en el flujo para obtener TCEA real.</p>
-            </div>
+        <div class="indicators" id="indicators" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+          <div class="kpi"><div class="small">Cuota mensual</div><div class="num" id="k-cuota">-</div></div>
+          <div class="kpi"><div class="small">Costo total</div><div class="num" id="k-costo">-</div></div>
+          <div class="kpi"><div class="small">TEA</div><div class="num" id="k-tea">-</div></div>
+          <div class="kpi"><div class="small">VAN</div><div class="num" id="k-van">-</div></div>
+          <div class="kpi"><div class="small">TIR</div><div class="num" id="k-tir">-</div></div>
+          <div class="kpi"><div class="small">Monto neto</div><div class="num" id="k-neto">-</div></div>
         </div>
 
-        <div class="card" style="margin-top:12px;">
-            <strong>Acciones rápidas</strong>
-            <div style="margin-top:8px;">
-                <button id="btn-limpiar">Limpiar resultados</button>
-                <button id="btn-descargar-pdf" disabled>Generar PDF (no implementado)</button>
-                <div class="note">Puedes integrar este front con tu backend: guarda clientes, inmuebles y flujos. Si quieres, preparo endpoints REST y DB.</div>
-            </div>
+        <div id="tabla-wrapper" style="margin-top:12px;">
+          <div class="flex-between"><strong>Tabla de amortización</strong><div class="small">exportable</div></div>
+          <div id="tabla-contenedor" style="overflow:auto; max-height:420px; margin-top:8px;">
+            <table id="tabla-amort" style="min-width:900px;">
+              <thead><tr><th>Período</th><th>Saldo inicial</th><th>Interés</th><th>Amortización</th><th>Cuota</th><th>Saldo final</th></tr></thead>
+              <tbody id="tbody-amort"></tbody>
+            </table>
+          </div>
         </div>
+      </div>
 
-        <!-- Moved: Registro de cliente -->
-        <div class="card" style="margin-top:12px;">
-            <strong>Registro de cliente</strong>
-            <div style="margin-top:8px;">
-                <label>Nombre completo</label>
-                <input id="cliente-nombre" type="text" placeholder="Ej: Juan Pérez" />
-
-                <label style="margin-top:8px;">DNI / Documento</label>
-                <input id="cliente-doc" type="text" />
-
-                <label style="margin-top:8px;">Ingresos mensuales (opcional)</label>
-                <input id="cliente-ingresos" type="number" />
-
-                <label style="margin-top:8px;">Observaciones socio-económicas</label>
-                <textarea id="cliente-obs" rows="3"></textarea>
-
-                <div style="margin-top:8px;" class="muted">Los datos se almacenan localmente en el navegador (demo). Integra con tu backend cuando quieras.</div>
-                <div style="display:flex; gap:8px; margin-top:8px;">
-                    <button id="btn-guardar-cliente" type="button">Guardar cliente</button>
-                    <button id="btn-cargar-cliente" type="button">Cargar demo</button>
-                </div>
-            </div>
+      <!-- Ficha de la unidad inmobiliaria -->
+      <div class="card" style="margin-top:12px;">
+        <strong>Ficha de la unidad inmobiliaria</strong>
+        <div style="margin-top:8px;">
+          <label for="inmueble-proy">Proyecto / Condominio</label><input id="inmueble-proy" />
+          <label for="inmueble-unidad" style="margin-top:8px;">Unidad (Nº)</label><input id="inmueble-unidad" />
+          <label for="inmueble-precio" style="margin-top:8px;">Precio venta</label><input id="inmueble-precio" type="number" />
+          <label for="inmueble-desc" style="margin-top:8px;">Características</label><textarea id="inmueble-desc" rows="3"></textarea>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button id="btn-guardar-inmueble">Guardar unidad</button>
+            <button id="btn-cargar-inmueble" type="button">Cargar demo</button>
+          </div>
         </div>
-
-        <!-- Moved: Ficha de la unidad inmobiliaria -->
-        <div class="card" style="margin-top:12px;">
-            <strong>Ficha de la unidad inmobiliaria</strong>
-            <div style="margin-top:8px;">
-                <label>Proyecto / Condominio</label><input id="inmueble-proy" />
-                <label style="margin-top:8px;">Unidad (Nº)</label><input id="inmueble-unidad" />
-                <label style="margin-top:8px;">Precio venta</label><input id="inmueble-precio" type="number" />
-                <label style="margin-top:8px;">Características</label><textarea id="inmueble-desc" rows="3"></textarea>
-                <div style="display:flex; gap:8px; margin-top:8px;">
-                    <button id="btn-guardar-inmueble">Guardar unidad</button>
-                    <button id="btn-cargar-inmueble" type="button">Cargar demo</button>
-                </div>
-            </div>
-        </div>
-
-        <footer>Hecho con cariño (y algunas ecuaciones). Si quieres que el CSV venga en formato listo para imprimir o que el cálculo incluya comisiones y seguros para obtener TCEA, dime y lo adapto.</footer>
+      </div>
     </div>
-</div>
+  </div>
+</main>
 
-<!-- Auth client + app scripts -->
 <script src="js/auth.js"></script>
 <script src="js/scripts.js"></script>
 </body>
