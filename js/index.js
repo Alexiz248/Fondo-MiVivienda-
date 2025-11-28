@@ -2,7 +2,6 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
-const { nanoid } = require('nanoid');
 const bcrypt = require('bcryptjs');
 
 const app = express();
@@ -20,12 +19,18 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 
-// We'll dynamically import lowdb (ESM) and then initialize DB and routes inside an async IIFE.
+// We'll dynamically import ESM-only modules (lowdb and nanoid) and then initialize DB and routes inside an async IIFE.
+let nanoid; // will be set after dynamic import
+
 (async function initServer() {
     try {
         // dynamic import for ESM-only lowdb
         const { Low } = await import('lowdb');
         const { JSONFile } = await import('lowdb/node');
+
+        // dynamic import for ESM-only nanoid
+        const nanoidModule = await import('nanoid');
+        nanoid = nanoidModule.nanoid;
 
         // LowDB setup using db.json at project root
         const file = path.join(__dirname, '..', 'db.json');
