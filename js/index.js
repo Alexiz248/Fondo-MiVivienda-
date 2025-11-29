@@ -1,12 +1,12 @@
 // javascript
 // File: `js/index.js`
-// Adaptado para evitar ERR_REQUIRE_ESM: import dinámico de lowdb
+// Adaptado para evitar ERR_REQUIRE_ESM: import dinámico de lowdb y nanoid
 
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
-const { nanoid } = require('nanoid');
+let nanoid; // se asigna dinámicamente porque nanoid es ESM
 const bcrypt = require('bcryptjs');
 
 const app = express();
@@ -26,6 +26,9 @@ app.get('/', (req, res) => {
         const lowdbNode = await import('lowdb/node');
         const { Low } = lowdb;
         const { JSONFile } = lowdbNode;
+
+        // import dinámico de nanoid (ESM)
+        nanoid = (await import('nanoid')).nanoid;
 
         // LowDB setup
         const file = path.join(__dirname, '..', 'db.json');
