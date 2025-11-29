@@ -1,56 +1,59 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Login - Simulador MiVivienda</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Login - Simulador MiVivienda</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div style="max-width:420px; margin:40px auto;">
+<div style="max-width:420px; margin:40px auto;">
     <div class="card" id="login-card">
-      <h2>Acceso</h2>
-      <form id="login-form-page">
-        <label for="page-login-dni">Número de documento (DNI)</label>
-        <input id="page-login-dni" type="text" />
-        <label for="page-login-email" style="margin-top:8px;">Email</label>
-        <input id="page-login-email" type="email" />
-        <label for="page-login-password" style="margin-top:8px;">Contraseña</label>
-        <input id="page-login-password" type="password" />
-        <div style="display:flex; gap:8px; margin-top:12px;">
-          <button id="page-btn-login" type="button">Iniciar sesión</button>
-        </div>
-        <div style="margin-top:10px; font-size:14px;">¿No tienes cuenta? <a href="#" id="link-to-register">Regístrate</a></div>
-        <div id="page-login-error" class="small danger" style="display:none; margin-top:8px;"></div>
-      </form>
+        <h2>Acceso</h2>
+        <form id="login-form-page">
+            <label for="page-login-dni">Número de documento (DNI)</label>
+            <input id="page-login-dni" type="text" />
+            <label for="page-login-email" style="margin-top:8px;">Email</label>
+            <input id="page-login-email" type="email" />
+            <label for="page-login-password" style="margin-top:8px;">Contraseña</label>
+            <input id="page-login-password" type="password" />
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <button id="page-btn-login" type="button">Iniciar sesión</button>
+            </div>
+            <div style="margin-top:10px; font-size:14px;">¿No tienes cuenta? <a href="#" id="link-to-register">Regístrate</a></div>
+            <div id="page-login-error" class="small danger" style="display:none; margin-top:8px;"></div>
+        </form>
     </div>
 
     <div class="card" id="register-card" style="display:none; margin-top:12px;">
-      <h2>Registro</h2>
-      <form id="register-form-page">
-        <label for="page-reg-first">Nombres</label>
-        <input id="page-reg-first" type="text" />
-        <label for="page-reg-last" style="margin-top:8px;">Apellido</label>
-        <input id="page-reg-last" type="text" />
-        <label for="page-reg-dni" style="margin-top:8px;">DNI</label>
-        <input id="page-reg-dni" type="text" />
-        <label for="page-reg-email" style="margin-top:8px;">Email</label>
-        <input id="page-reg-email" type="email" />
-        <label for="page-reg-password" style="margin-top:8px;">Contraseña</label>
-        <input id="page-reg-password" type="password" />
-        <div style="display:flex; gap:8px; margin-top:12px;">
-          <button id="page-btn-register" type="button">Crear cuenta</button>
-        </div>
-        <div style="margin-top:10px; font-size:14px;">¿Ya tienes cuenta? <a href="#" id="link-to-login">Inicia sesión</a></div>
-        <div id="page-reg-error" class="small danger" style="display:none; margin-top:8px;"></div>
-      </form>
+        <h2>Registro</h2>
+        <form id="register-form-page">
+            <label for="page-reg-first">Nombres</label>
+            <input id="page-reg-first" type="text" />
+            <label for="page-reg-last" style="margin-top:8px;">Apellido</label>
+            <input id="page-reg-last" type="text" />
+            <label for="page-reg-dni" style="margin-top:8px;">DNI</label>
+            <input id="page-reg-dni" type="text" />
+            <label for="page-reg-email" style="margin-top:8px;">Email</label>
+            <input id="page-reg-email" type="email" />
+            <label for="page-reg-password" style="margin-top:8px;">Contraseña</label>
+            <input id="page-reg-password" type="password" />
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <button id="page-btn-register" type="button">Crear cuenta</button>
+            </div>
+            <div style="margin-top:10px; font-size:14px;">¿Ya tienes cuenta? <a href="#" id="link-to-login">Inicia sesión</a></div>
+            <div id="page-reg-error" class="small danger" style="display:none; margin-top:8px;"></div>
+        </form>
     </div>
 
     <div style="text-align:center; margin-top:16px;">
-      <a href="index.html">Volver a la app</a>
+        <a href="index.html">Volver a la app</a>
     </div>
-  </div>
+</div>
 
-  <script src="js/login.js"></script>
+<!-- Cargar configuración y helpers de auth antes que login.js -->
+<script src="/js/api-config.js"></script>
+<script src="/js/auth.js"></script>
+<script src="js/login.js"></script>
 </body>
 </html>

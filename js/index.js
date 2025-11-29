@@ -1,6 +1,5 @@
 // javascript
-// File: `js/index.js`
-// Adaptado para evitar ERR_REQUIRE_ESM y error "lowdb: missing default data"
+// File: `js/index.js` (modificado para exponer /health)
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -12,6 +11,9 @@ const bcrypt = require('bcryptjs');
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+
+// HEALTH endpoint para checks de plataforma
+app.get('/health', (req, res) => res.json({ ok: true }));
 
 // Serve static frontend
 app.use(express.static(path.join(__dirname, '..')));
