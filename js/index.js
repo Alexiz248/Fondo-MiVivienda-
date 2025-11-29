@@ -1,6 +1,6 @@
 // javascript
 // File: `js/index.js`
-// Adaptado para evitar ERR_REQUIRE_ESM: import dinámico de lowdb y nanoid
+// Adaptado para evitar ERR_REQUIRE_ESM y error "lowdb: missing default data"
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -34,10 +34,12 @@ app.get('/', (req, res) => {
         const file = path.join(__dirname, '..', 'db.json');
         const adapter = new JSONFile(file);
         const defaultData = { users: [], clientes: [], inmuebles: [], operations: [] };
-        const db = new Low(adapter);
+
+        // pasar defaultData al constructor para evitar "missing default data"
+        const db = new Low(adapter, defaultData);
 
         await db.read();
-        db.data = db.data || defaultData;
+        // db.data ya contendrá defaultData si el archivo no existe o está vacío
         await db.write();
 
         async function findUserByToken(token){
