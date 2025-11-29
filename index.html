@@ -1,3 +1,6 @@
+<!-- html
+File: `index.html`
+-->
 <!doctype html>
 <html lang="es">
 <head>
@@ -8,145 +11,177 @@
 </head>
 <body>
 <script>
-  // Si no hay auth en localStorage, redirigir al login
-  try{
-    const isLoginPage = location.pathname && location.pathname.toLowerCase().endsWith('login.html');
-    const auth = localStorage.getItem('fmv_auth');
-    if(!isLoginPage && (!auth || auth === 'null')){
-      window.location.href = 'login.html';
-    }
-  }catch(e){}
+    // Si no hay auth en localStorage, redirigir al login
+    try{
+        const isLoginPage = location.pathname && location.pathname.toLowerCase().endsWith('login.html');
+        const auth = localStorage.getItem('fmv_auth');
+        if(!isLoginPage && (!auth || auth === 'null')){
+            window.location.href = 'login.html';
+        }
+    }catch(e){}
 </script>
 
-<!-- Barra de autenticación (solo usuario/logout en la app principal) -->
 <div id="auth-bar" style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px;">
-  <div id="auth-user" style="display:none; align-items:center; gap:8px;">
-    <span id="auth-username" class="small"></span>
-    <button id="btn-logout" style="background:#e11d48; padding:8px 12px; border-radius:8px;">Cerrar sesión</button>
-  </div>
+    <div id="auth-user" style="display:none; align-items:center; gap:8px;">
+        <span id="auth-username" class="small"></span>
+        <button id="btn-logout" style="background:#e11d48; padding:8px 12px; border-radius:8px;">Cerrar sesión</button>
+    </div>
 </div>
 
 <main style="padding:8px;">
-  <h1>Simulador Crédito MiVivienda — Método Francés</h1>
-  <p class="muted">Interfaz demo para cabinas de venta. Ahora con login/register y persistencia demo en <code>db.json</code>.</p>
+    <h1>Simulador Crédito MiVivienda — Método Francés</h1>
+    <p class="muted">Interfaz demo para cabinas de venta. Ahora con login/register y persistencia demo en <code>db.json</code>.</p>
 
-  <div class="layout">
-    <!-- PANEL IZQUIERDO: CONFIG -->
-    <div>
-      <div class="card">
-        <div class="flex-between"><strong>Configuración del préstamo</strong><span class="small">ajustes</span></div>
-        <div style="margin-top:10px;">
-          <label for="cfg-moneda">Moneda</label>
-          <select id="cfg-moneda"><option value="PEN">Soles (PEN)</option><option value="USD">Dólares (USD)</option></select>
+    <div class="layout">
+        <!-- PANEL IZQUIERDO: CONFIG -->
+        <div>
+            <div class="card">
+                <div class="flex-between"><strong>Configuración del préstamo</strong><span class="small">ajustes</span></div>
+                <div style="margin-top:10px;">
+                    <label for="cfg-moneda">Moneda</label>
+                    <select id="cfg-moneda"><option value="PEN">Soles (PEN)</option><option value="USD">Dólares (USD)</option></select>
 
-          <label for="cfg-tipo-tasa" style="margin-top:8px;">Tipo de tasa</label>
-          <select id="cfg-tipo-tasa">
-            <option value="efectiva">Efectiva anual</option>
-            <option value="nominal">Nominal anual</option>
-          </select>
+                    <label for="cfg-tipo-tasa" style="margin-top:8px;">Tipo de tasa</label>
+                    <select id="cfg-tipo-tasa">
+                        <option value="efectiva">Efectiva anual</option>
+                        <option value="nominal">Nominal anual</option>
+                    </select>
 
-          <label for="cfg-capitalizacion" style="margin-top:8px;">Si nominal: capitalización por año</label>
-          <select id="cfg-capitalizacion">
-            <option value="12">12 (mensual)</option>
-            <option value="6">6 (bimestral)</option>
-            <option value="4">4 (trimestral)</option>
-            <option value="360">360 (diaria)</option>
-          </select>
+                    <label for="cfg-capitalizacion" style="margin-top:8px;">Si nominal: capitalización por año</label>
+                    <select id="cfg-capitalizacion">
+                        <option value="12">12 (mensual)</option>
+                        <option value="6">6 (bimestral)</option>
+                        <option value="4">4 (trimestral)</option>
+                        <option value="2">2 (semestral)</option>
+                        <option value="360">360 (diaria)</option>
+                    </select>
 
-          <label for="input-plazo" style="margin-top:8px;">Plazo total (meses)</label>
-          <input id="input-plazo" type="number" value="240" min="1" />
+                    <label for="input-plazo" style="margin-top:8px;">Plazo total (periodos)</label>
+                    <input id="input-plazo" type="number" value="240" min="1" />
 
-          <label for="input-tasa" style="margin-top:8px;">Tasa anual (%)</label>
-          <input id="input-tasa" type="number" step="0.0001" value="8.5" />
+                    <label for="input-tasa" style="margin-top:8px;">Tasa anual (%)</label>
+                    <input id="input-tasa" type="number" step="0.0001" value="8.5" />
 
-          <!-- Campo calculado: tasa efectiva mensual -->
-          <label for="input-tasa-mensual" style="margin-top:6px;">Tasa efectiva mensual (%)</label>
-          <input id="input-tasa-mensual" type="text" readonly value="-" />
+                    <!-- Nuevo: modo de tasa -->
+                    <label for="input-tasa-mode" style="margin-top:8px;">Modo de tasa</label>
+                    <select id="input-tasa-mode">
+                        <option value="fixed">Fija (igual todos los periodos)</option>
+                        <option value="multi">Diferente por segmentos</option>
+                    </select>
 
-          <label for="input-principal" style="margin-top:8px;">Capital solicitado</label>
-          <input id="input-principal" type="number" step="0.01" value="120000" />
+                    <div id="tasa-multiple-controls" style="margin-top:8px; display:none;">
+                        <label for="input-tasa-segments-count">Dividir en (segmentos)</label>
+                        <select id="input-tasa-segments-count">
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
 
-          <!-- Campo calculado: monto capitalizado y cuota fija mensual -->
-          <label for="input-cuota-fija" style="margin-top:6px;">Monto capitalizado</label>
-          <input id="input-cuota-fija" type="text" readonly value="-" />
+                        <div id="tasa-segments-container" style="margin-top:8px;">
+                            <!-- se generarán inputs: tasa % y periodos para cada segmento -->
+                        </div>
 
-          <label for="input-cuota-fija-mensual" style="margin-top:6px;">Cuota fija mensual</label>
-          <input id="input-cuota-fija-mensual" type="text" readonly value="-" />
+                        <div class="note" style="margin-top:6px;">Ejemplo: Segmento 1 → 8% durante 2 periodos, Segmento 2 → 9% durante resto</div>
+                    </div>
 
-          <label for="input-bono" style="margin-top:8px;">Bono (opcional)</label>
-          <input id="input-bono" type="number" step="0.01" value="0" />
+                    <!-- Campo calculado: tasa efectiva por periodo -->
+                    <label for="input-tasa-mensual" style="margin-top:6px;">Tasa efectiva por período (%)</label>
+                    <input id="input-tasa-mensual" type="text" readonly value="-" />
 
-          <label for="input-gracia" style="margin-top:8px;">Periodo de gracia</label>
-          <select id="input-gracia">
-            <option value="none">Sin gracia</option>
-            <option value="partial">Parcial</option>
-            <option value="total">Total</option>
-          </select>
+                    <label for="input-principal" style="margin-top:8px;">Capital solicitado</label>
+                    <input id="input-principal" type="number" step="0.01" value="120000" />
 
-          <label for="input-meses-gracia" style="margin-top:8px;">Meses de gracia</label>
-          <input id="input-meses-gracia" type="number" min="0" value="0" />
+                    <!-- Campo calculado: monto capitalizado y cuota fija mensual -->
+                    <label for="input-cuota-fija" style="margin-top:6px;">Monto capitalizado</label>
+                    <input id="input-cuota-fija" type="text" readonly value="-" />
 
-          <label for="input-capitaliza-gracia" style="margin-top:8px;">Capitalizar intereses en gracia total?</label>
-          <select id="input-capitaliza-gracia">
-            <option value="no">No</option>
-            <option value="si">Sí</option>
-          </select>
+                    <label for="input-cuota-fija-mensual" style="margin-top:6px;">Cuota fija por periodo</label>
+                    <input id="input-cuota-fija-mensual" type="text" readonly value="-" />
 
-          <label for="input-tasa-descuento" style="margin-top:8px;">Tasa descuento VAN (%)</label>
-          <input id="input-tasa-descuento" type="number" value="6" step="0.0001" />
+                    <label for="input-bono" style="margin-top:8px;">Bono (opcional)</label>
+                    <input id="input-bono" type="number" step="0.01" value="0" />
 
-          <div class="controls" style="margin-top:12px; display:flex; gap:8px;">
-            <button id="btn-calcular">Calcular</button>
-            <button id="btn-limpiar">Limpiar resultados</button>
-            <button id="btn-export" type="button">Exportar CSV</button>
-          </div>
+                    <label for="input-comision-fija" style="margin-top:8px;">Comisión apertura (monto)</label>
+                    <input id="input-comision-fija" type="number" step="0.01" value="0" />
+
+                    <label for="input-comision-pct" style="margin-top:8px;">Comisión apertura (%)</label>
+                    <input id="input-comision-pct" type="number" step="0.0001" value="0" />
+
+                    <label for="input-seguro-periodico" style="margin-top:8px;">Seguro periódico (monto por periodo)</label>
+                    <input id="input-seguro-periodico" type="number" step="0.01" value="0" />
+
+                    <label for="input-gracia" style="margin-top:8px;">Periodo de gracia</label>
+                    <select id="input-gracia">
+                        <option value="none">Sin gracia</option>
+                        <option value="partial">Parcial</option>
+                        <option value="total">Total</option>
+                    </select>
+
+                    <label for="input-meses-gracia" style="margin-top:8px;">Meses de gracia</label>
+                    <input id="input-meses-gracia" type="number" min="0" value="0" />
+
+                    <label for="input-capitaliza-gracia" style="margin-top:8px;">Capitalizar intereses en gracia total?</label>
+                    <select id="input-capitaliza-gracia">
+                        <option value="no">No</option>
+                        <option value="si">Sí</option>
+                    </select>
+
+                    <label for="input-tasa-descuento" style="margin-top:8px;">Tasa descuento VAN (%)</label>
+                    <input id="input-tasa-descuento" type="number" value="6" step="0.0001" />
+
+                    <div class="controls" style="margin-top:12px; display:flex; gap:8px;">
+                        <button id="btn-calcular">Calcular</button>
+                        <button id="btn-limpiar">Limpiar resultados</button>
+                        <button id="btn-export" type="button" disabled>Exportar CSV</button>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
+
+        <!-- PANEL DERECHO: RESULTADOS -->
+        <div>
+            <div class="card">
+                <div class="flex-between"><strong>Resultados e indicadores</strong><div class="small">Resumen</div></div>
+
+                <div class="indicators" id="indicators" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <div class="kpi"><div class="small">Cuota mensual</div><div class="num" id="k-cuota">-</div></div>
+                    <div class="kpi"><div class="small">Costo total</div><div class="num" id="k-costo">-</div></div>
+                    <div class="kpi"><div class="small">TEA</div><div class="num" id="k-tea">-</div></div>
+                    <div class="kpi"><div class="small">VAN</div><div class="num" id="k-van">-</div></div>
+                    <div class="kpi"><div class="small">TIR</div><div class="num" id="k-tir">-</div></div>
+                    <div class="kpi"><div class="small">Monto neto</div><div class="num" id="k-neto">-</div></div>
+                </div>
+
+                <div id="tabla-wrapper" style="margin-top:12px;">
+                    <div class="flex-between"><strong>Tabla de amortización</strong><div class="small">exportable</div></div>
+                    <div id="tabla-contenedor" style="overflow:auto; max-height:420px; margin-top:8px;">
+                        <table id="tabla-amort" style="min-width:900px;">
+                            <thead><tr><th>Período</th><th>Saldo inicial</th><th>Interés</th><th>Amortización</th><th>Cuota</th><th>Saldo final</th></tr></thead>
+                            <tbody id="tbody-amort"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top:12px;">
+                <strong>Ficha de la unidad inmobiliaria</strong>
+                <div style="margin-top:8px;">
+                    <label for="inmueble-proy">Proyecto / Condominio</label><input id="inmueble-proy" />
+                    <label for="inmueble-unidad" style="margin-top:8px;">Unidad (Nº)</label><input id="inmueble-unidad" />
+                    <label for="inmueble-precio" style="margin-top:8px;">Precio venta</label><input id="inmueble-precio" type="number" />
+                    <label for="inmueble-desc" style="margin-top:8px;">Características</label><textarea id="inmueble-desc" rows="3"></textarea>
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <button id="btn-guardar-inmueble">Guardar unidad</button>
+                        <button id="btn-cargar-inmueble" type="button">Cargar demo</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <!-- PANEL DERECHO: RESULTADOS -->
-    <div>
-      <div class="card">
-        <div class="flex-between"><strong>Resultados e indicadores</strong><div class="small">Resumen</div></div>
-
-        <div class="indicators" id="indicators" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
-          <div class="kpi"><div class="small">Cuota mensual</div><div class="num" id="k-cuota">-</div></div>
-          <div class="kpi"><div class="small">Costo total</div><div class="num" id="k-costo">-</div></div>
-          <div class="kpi"><div class="small">TEA</div><div class="num" id="k-tea">-</div></div>
-          <div class="kpi"><div class="small">VAN</div><div class="num" id="k-van">-</div></div>
-          <div class="kpi"><div class="small">TIR</div><div class="num" id="k-tir">-</div></div>
-          <div class="kpi"><div class="small">Monto neto</div><div class="num" id="k-neto">-</div></div>
-        </div>
-
-        <div id="tabla-wrapper" style="margin-top:12px;">
-          <div class="flex-between"><strong>Tabla de amortización</strong><div class="small">exportable</div></div>
-          <div id="tabla-contenedor" style="overflow:auto; max-height:420px; margin-top:8px;">
-            <table id="tabla-amort" style="min-width:900px;">
-              <thead><tr><th>Período</th><th>Saldo inicial</th><th>Interés</th><th>Amortización</th><th>Cuota</th><th>Saldo final</th></tr></thead>
-              <tbody id="tbody-amort"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Ficha de la unidad inmobiliaria -->
-      <div class="card" style="margin-top:12px;">
-        <strong>Ficha de la unidad inmobiliaria</strong>
-        <div style="margin-top:8px;">
-          <label for="inmueble-proy">Proyecto / Condominio</label><input id="inmueble-proy" />
-          <label for="inmueble-unidad" style="margin-top:8px;">Unidad (Nº)</label><input id="inmueble-unidad" />
-          <label for="inmueble-precio" style="margin-top:8px;">Precio venta</label><input id="inmueble-precio" type="number" />
-          <label for="inmueble-desc" style="margin-top:8px;">Características</label><textarea id="inmueble-desc" rows="3"></textarea>
-          <div style="display:flex; gap:8px; margin-top:8px;">
-            <button id="btn-guardar-inmueble">Guardar unidad</button>
-            <button id="btn-cargar-inmueble" type="button">Cargar demo</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 </main>
+
 <script src="/js/api-config.js"></script>
+<script src="js/lib/calculations.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/scripts.js"></script>
 </body>
